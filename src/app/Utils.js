@@ -2,9 +2,8 @@ import * as THREE from "three"
 
 const textureLoader = new THREE.TextureLoader()
 
-export function buildGrid( tileEngine, color = 0xffffff ) {
+export function buildGrid( tileEngine, grid, color = 0xffffff ) {
 
-	const grid = tileEngine.getTileGrid()
 	const size = grid.length
 
 	//
@@ -56,4 +55,28 @@ export function buildGrid( tileEngine, color = 0xffffff ) {
 	}
 
 	return grid3D
+}
+
+export function voxelPositionToKey( [ x, y, z ] ) {
+
+	return `${ x }_${ y }_${ z }`
+}
+
+export function serializeTileStore( tileStore, minify = true ) {
+
+	const voxels = tileStore.values()
+
+	const serialized = []
+
+	for ( const voxel of voxels ) {
+
+		serialized.push( voxel )
+	}
+
+	if ( minify ) {
+
+		return JSON.stringify( serialized )
+	}
+
+	return JSON.stringify( serialized, null, "\t" )
 }

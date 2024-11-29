@@ -13,21 +13,23 @@ const { canvas, scene, camera, controls, renderer } = setupScene( {
 
 // TILE ENGINE
 
-const VOXEL_SIZE = 4 // min 2
-const VOXEL_RANGE_TILE = 4 // min 2
-const TILE_SIZE = VOXEL_RANGE_TILE * VOXEL_SIZE
-const TILE_RANGE = 2
+const VOXEL_SIZE = 2 // min 2
+const VOXEL_RANGE = 4 // min 2
+const TILE_SIZE = VOXEL_RANGE * VOXEL_SIZE
+const TILE_RANGE = 4
 const MAP_SIZE = TILE_SIZE * TILE_RANGE
 
 const tileEngine = new TileEngine( MAP_SIZE, TILE_SIZE )
+const gridStore = new Map()
 
-// PLACEHOLDER
-const placeholder = new THREE.Mesh(
-	new THREE.BoxGeometry( VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE ),
-	new THREE.MeshBasicMaterial( { opacity: 0.5, transparent: true, color: 0x000000 } )
-)
-placeholder.visible = false
-scene.add( placeholder )
+const grid = tileEngine.getTileGrid()
+
+for ( const tile of grid ) {
+
+	const tileKey = tileEngine.tileToKey( ...tile )
+
+	gridStore.set( tileKey, new Map() )
+}
 
 // GROUND
 
@@ -38,9 +40,25 @@ const ground = new THREE.Mesh(
 ground.receiveShadow = true
 scene.add( ground )
 
+// PLACEHOLDER
+const placeholder = new THREE.Mesh(
+	new THREE.BoxGeometry( VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE ),
+	new THREE.MeshBasicMaterial( { opacity: 0.5, transparent: true, color: 0x000000 } )
+)
+placeholder.visible = false
+scene.add( placeholder )
+
+//
+
+const objects = [ ground ]
+
+// LOAD INITIAL TILES
+
+await loadInitialTiles()
+
 // HELPERS
 
-scene.add( Utils.buildGrid( tileEngine, 0x303030 ) )
+scene.add( Utils.buildGrid( tileEngine, grid, 0x303030 ) )
 scene.add( new THREE.AxesHelper( 512 ) )
 
 //
@@ -49,8 +67,6 @@ let mode = "controls"
 
 const raycaster = new THREE.Raycaster()
 const pointer = new THREE.Vector2()
-
-const objects = [ ground ]
 
 // UI
 
@@ -125,23 +141,108 @@ canvas.addEventListener( "pointerdown", e => {
 
 			if ( intersect.object !== ground ) {
 
-				scene.remove( intersect.object )
+				const { position } = intersect.object
 
+				const { x, z } = position
+
+				const tile = tileEngine.pointToTile( x, z )
+				const tileKey = tileEngine.tileToKey( ...tile )
+				const positionKey = Utils.voxelPositionToKey( [ ...position ] )
+
+				const tileStore = gridStore.get( tileKey )
+
+				if ( !tileStore.has( positionKey ) ) {
+
+					return
+				}
+
+				tileStore.delete( positionKey )
+
+				const serialized = Utils.serializeTileStore( tileStore, false )
+
+				console.clear()
+				console.log( tileKey )
+				console.log( serialized )
+
+				//
+
+				scene.remove( intersect.object )
 				objects.splice( objects.indexOf( intersect.object ), 1 )
 			}
 		}
 		else if ( mode === "attach" ) {
 
-			const geometry = new THREE.BoxGeometry( VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE )
-			const material = new THREE.MeshPhongMaterial( { transparent: true, flatShading: true, color: 0xffffff * Math.random() } )
-			const object = new THREE.Mesh( geometry, material )
-			object.position.copy( intersect.point ).add( intersect.face.normal )
-			object.position.divideScalar( VOXEL_SIZE ).floor().multiplyScalar( VOXEL_SIZE ).addScalar( VOXEL_SIZE / 2 )
-			object.castShadow = true
-			object.receiveShadow = true
-			scene.add( object )
+			const position = new THREE.Vector3()
+			.copy( intersect.point )
+			.add( intersect.face.normal )
+			.divideScalar( VOXEL_SIZE )
+			.floor()
+			.multiplyScalar( VOXEL_SIZE )
+			.addScalar( VOXEL_SIZE / 2 )
 
-			objects.push( object )
+			const { x, z } = position
+
+			const tile = tileEngine.pointToTile( x, z )
+			const tileKey = tileEngine.tileToKey( ...tile )
+			const positionKey = Utils.voxelPositionToKey( [ ...position ] )
+
+			const tileStore = gridStore.get( tileKey )
+
+			if ( tileStore.has( positionKey ) ) {
+
+				return
+			}
+
+			const voxel = {
+				position: [ ...position ],
+				color: Math.floor( 0xffffff * Math.random() ),
+			}
+
+			tileStore.set( positionKey, voxel )
+
+			const serialized = Utils.serializeTileStore( tileStore, false )
+
+			console.clear()
+			console.log( tileKey )
+			console.log( serialized )
+
+			//
+
+			attachVoxel( voxel )
 		}
 	}
 } )
+
+function attachVoxel( voxel ) {
+
+	const geometry = new THREE.BoxGeometry( VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE )
+	const material = new THREE.MeshPhongMaterial( { transparent: true, flatShading: true, color: voxel.color } )
+	const object = new THREE.Mesh( geometry, material )
+	object.position.copy( new THREE.Vector3( ...voxel.position ) )
+	object.castShadow = true
+	object.receiveShadow = true
+	scene.add( object )
+
+	objects.push( object )
+}
+
+async function loadInitialTiles() {
+
+	for await ( const tile of grid ) {
+
+		const tileKey = tileEngine.tileToKey( ...tile )
+
+		const voxels = await ( await fetch( `/tiles/${ tileKey }.json` ) ).json()
+
+		for ( const voxel of voxels ) {
+
+			const positionKey = Utils.voxelPositionToKey( voxel.position )
+
+			const tileStore = gridStore.get( tileKey )
+
+			tileStore.set( positionKey, voxel )
+
+			attachVoxel( voxel )
+		}
+	}
+}

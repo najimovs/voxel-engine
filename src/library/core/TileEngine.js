@@ -41,6 +41,17 @@ class TileEngine {
 	}
 
 	/**
+	 * Converts (u, v) tile indices to tile hash.
+	 * @param {number} u - Tile index along the u-axis
+	 * @param {number} v - Tile index along the v-axis
+	 * @returns {string} - Tile hash
+	 */
+	tileToKey( u, v ) {
+
+		return `${ u }_${ v }`
+	}
+
+	/**
 	 * Clamps (u, v) tile indices to be within the valid range of [0, totalTiles - 1].
 	 * @param {number} u - Tile index along the u-axis
 	 * @param {number} v - Tile index along the v-axis
