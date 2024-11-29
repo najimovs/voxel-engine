@@ -21,6 +21,7 @@ export function buildGrid( tileEngine, color = 0xffffff ) {
 		alphaMap: texture,
 		alphaTest: 0.5,
 		color,
+		depthTest: false,
 	} )
 
 	const TILE_SIZE = tileEngine.tileSize

@@ -4,6 +4,7 @@ import Stats from "three/addons/libs/stats.module.js"
 
 import { TileEngine } from "@lib/core/TileEngine"
 import * as Utils from "@app/Utils"
+import * as MathUtils from "@app/MathUtils"
 
 // SETUP
 
@@ -23,6 +24,16 @@ controls.maxPolarAngle = Math.PI / 2 - 0.5
 const renderer = new THREE.WebGLRenderer( { canvas } )
 renderer.setPixelRatio( window.devicePixelRatio )
 renderer.setSize( window.innerWidth, window.innerHeight )
+
+// LIGHTS
+
+const dirLight = new THREE.DirectionalLight()
+dirLight.position.set( 128, 512, 256 ).normalize()
+scene.add( dirLight )
+
+const hemiLight = new THREE.HemisphereLight()
+hemiLight.position.set( 0, 512, 0 )
+scene.add( hemiLight )
 
 // ON RESIZE
 
@@ -55,7 +66,30 @@ const MAP_SIZE = TILE_SIZE * COL_SIZE
 
 const tileEngine = new TileEngine( MAP_SIZE, TILE_SIZE )
 
+// WORLD
+
+{
+	const geometry = new THREE.PlaneGeometry( TILE_SIZE * COL_SIZE, TILE_SIZE * COL_SIZE ).rotateX( - Math.PI / 2 )
+	const material = new THREE.MeshStandardMaterial( { color: 0x808080 } )
+	const object = new THREE.Mesh( geometry, material )
+	scene.add( object )
+}
+
+for ( let x = - ( TILE_SIZE * COL_SIZE ) / 2; x < ( TILE_SIZE * COL_SIZE ) / 2; x += 4 ) {
+
+	for ( let z = - ( TILE_SIZE * COL_SIZE ) / 2; z < ( TILE_SIZE * COL_SIZE ) / 2; z += 4 ) {
+
+		const voxelHeight = MathUtils.randInt( 5, 20 )
+
+		const geometry = new THREE.BoxGeometry( 1, voxelHeight, 1 )
+		const material = new THREE.MeshPhongMaterial()
+		const object = new THREE.Mesh( geometry, material )
+		object.position.set( x, voxelHeight / 2, z )
+		scene.add( object )
+	}
+}
+
 // HELPERS
 
-scene.add( Utils.buildGrid( tileEngine, 0x202020 ) )
+scene.add( Utils.buildGrid( tileEngine, 0x000000 ) )
 scene.add( new THREE.AxesHelper( 512 ) )
