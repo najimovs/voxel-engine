@@ -15,7 +15,6 @@ const camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.inner
 camera.position.set( 8, 16, 8 )
 camera.lookAt( 0, 0, 0 )
 const controls = new MapControls( camera, canvas )
-controls.enabled = false
 controls.enableDamping = true
 controls.zoomToCursor = true
 controls.minDistance = 16
@@ -73,15 +72,17 @@ renderer.setAnimationLoop( () => {
 
 // TILE ENGINE
 
-const TILE_SIZE = 8
-const COL_SIZE = 128
-const MAP_SIZE = TILE_SIZE * COL_SIZE
+const VOXEL_SIZE = 4 // min 2
+const VOXEL_RANGE_TILE = 2 // min 2
+const TILE_SIZE = VOXEL_RANGE_TILE * VOXEL_SIZE
+const TILE_RANGE = 2
+const MAP_SIZE = TILE_SIZE * TILE_RANGE
 
 const tileEngine = new TileEngine( MAP_SIZE, TILE_SIZE )
 
 // PLACEHOLDER
 const placeholder = new THREE.Mesh(
-	new THREE.BoxGeometry( 2, 2, 2 ),
+	new THREE.BoxGeometry( VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE ),
 	new THREE.MeshBasicMaterial( { opacity: 0.5, transparent: true, color: 0x000000 } )
 )
 scene.add( placeholder )
@@ -89,7 +90,7 @@ scene.add( placeholder )
 // GROUND
 
 const ground = new THREE.Mesh(
-	new THREE.PlaneGeometry( TILE_SIZE * COL_SIZE, TILE_SIZE * COL_SIZE ).rotateX( - Math.PI / 2 ),
+	new THREE.PlaneGeometry( TILE_SIZE * TILE_RANGE, TILE_SIZE * TILE_RANGE ).rotateX( - Math.PI / 2 ),
 	new THREE.MeshStandardMaterial( { color: 0x202020 } )
 )
 ground.receiveShadow = true
@@ -129,13 +130,13 @@ function onModeChange() {
 
 	if ( mode === "controls" ) {
 
-		controls.enabled = true
+		controls.enablePan = true
 
 		placeholder.visible = false
 	}
 	else {
 
-		controls.enabled = false
+		controls.enablePan = false
 
 		placeholder.visible = true
 	}
@@ -159,13 +160,13 @@ canvas.addEventListener( "pointermove", e => {
 		const intersect = intersects[ 0 ]
 
 		placeholder.position.copy( intersect.point ).add( intersect.face.normal )
-		placeholder.position.divideScalar( 2 ).floor().multiplyScalar( 2 ).addScalar( 1 )
+		placeholder.position.divideScalar( VOXEL_SIZE ).floor().multiplyScalar( VOXEL_SIZE ).addScalar( VOXEL_SIZE / 2 )
 	}
 } )
 
 canvas.addEventListener( "pointerdown", e => {
 
-	if ( mode === "controls" ) {
+	if ( mode === "controls" || e.which === 3 ) {
 
 		return
 	}
@@ -191,11 +192,11 @@ canvas.addEventListener( "pointerdown", e => {
 		}
 		else if ( mode === "attach" ) {
 
-			const geometry = new THREE.BoxGeometry( 2, 2, 2 )
+			const geometry = new THREE.BoxGeometry( VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE )
 			const material = new THREE.MeshPhongMaterial( { transparent: true, flatShading: true, color: 0xffffff * Math.random() } )
 			const object = new THREE.Mesh( geometry, material )
 			object.position.copy( intersect.point ).add( intersect.face.normal )
-			object.position.divideScalar( 2 ).floor().multiplyScalar( 2 ).addScalar( 1 )
+			object.position.divideScalar( VOXEL_SIZE ).floor().multiplyScalar( VOXEL_SIZE ).addScalar( VOXEL_SIZE / 2 )
 			object.castShadow = true
 			object.receiveShadow = true
 			scene.add( object )
