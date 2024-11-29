@@ -2,7 +2,7 @@ import * as THREE from "three"
 
 const textureLoader = new THREE.TextureLoader()
 
-export function buildGrid( tileEngine ) {
+export function buildGrid( tileEngine, color = 0xffffff ) {
 
 	const grid = tileEngine.getTileGrid()
 	const size = grid.length
@@ -20,7 +20,7 @@ export function buildGrid( tileEngine ) {
 		transparent: true,
 		alphaMap: texture,
 		alphaTest: 0.5,
-		color: 0x404040,
+		color,
 	} )
 
 	const TILE_SIZE = tileEngine.tileSize
