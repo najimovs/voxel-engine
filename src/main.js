@@ -3,11 +3,12 @@ import { MapControls } from "three/addons/controls/MapControls"
 import Stats from "three/addons/libs/stats.module.js"
 
 import { TileEngine } from "@lib/core/TileEngine"
+import * as Utils from "@app/Utils"
 
 const canvas = document.getElementById( "gl" )
 const scene = new THREE.Scene()
-const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2_000 )
-camera.position.set( 0, 1_000, 0 )
+const camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 2_000 )
+camera.position.set( 0, 256, 0 )
 camera.lookAt( 0, 0, 0 )
 const controls = new MapControls( camera, canvas )
 controls.enableDamping = true
@@ -35,33 +36,16 @@ renderer.setAnimationLoop( () => {
 
 //
 
-const TILE_SIZE = 8
-const COL_SIZE = 256
+const TILE_SIZE = 16
+const COL_SIZE = 16
 const MAP_SIZE = TILE_SIZE * COL_SIZE
 
-const tileEngine = new TileEngine( MAP_SIZE, TILE_SIZE, 16, 8 )
+const tileEngine = new TileEngine( MAP_SIZE, TILE_SIZE )
 
 // GRID
 
-const grid = tileEngine.getTileGrid()
+scene.add( Utils.buildGrid( tileEngine ) )
 
-const grid3D = new THREE.Object3D()
-scene.add( grid3D )
+//
 
-for ( const tile of grid ) {
-
-	const [ minX, minZ, maxX, maxZ ] = tileEngine.tileToBBox( ...tile )
-
-	const vertices = [
-		minX, 0, minZ,
-		maxX, 0, minZ,
-		maxX, 0, maxZ,
-		minX, 0, maxZ,
-	]
-
-	const geometry = new THREE.BufferGeometry()
-	geometry.setAttribute( "position", new THREE.Float32BufferAttribute( vertices, 3 ) )
-	const material = new THREE.LineBasicMaterial( { color: 0x202020 } )
-	const object = new THREE.LineLoop( geometry, material )
-	grid3D.add( object )
-}
+scene.add( new THREE.AxesHelper( 1_024 ) )
