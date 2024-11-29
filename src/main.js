@@ -10,11 +10,12 @@ import * as MathUtils from "@app/MathUtils"
 
 const canvas = document.getElementById( "gl" )
 const scene = new THREE.Scene()
-// scene.fog = new THREE.Fog( 0x000000, 1, 512 )
+scene.fog = new THREE.Fog( 0x000000, 1, 512 )
 const camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 1_024 )
-camera.position.set( 0, 256, 0 )
+camera.position.set( 8, 16, 8 )
 camera.lookAt( 0, 0, 0 )
 const controls = new MapControls( camera, canvas )
+controls.enabled = false
 controls.enableDamping = true
 controls.zoomToCursor = true
 controls.minDistance = 16
@@ -37,11 +38,11 @@ dirLight.shadow.camera.left = - 512
 dirLight.shadow.camera.right = 512
 dirLight.shadow.camera.near = 1
 dirLight.shadow.camera.far = 512
-dirLight.shadow.mapSize.width = 4096
-dirLight.shadow.mapSize.height = 4096
+dirLight.shadow.mapSize.width = 8_192
+dirLight.shadow.mapSize.height = 8_192
 scene.add( dirLight )
 
-scene.add( new THREE.DirectionalLightHelper( dirLight ) )
+// scene.add( new THREE.DirectionalLightHelper( dirLight ) )
 
 const hemiLight = new THREE.HemisphereLight()
 hemiLight.position.set( 0, 512, 0 )
@@ -72,39 +73,134 @@ renderer.setAnimationLoop( () => {
 
 // TILE ENGINE
 
-const TILE_SIZE = 16
-const COL_SIZE = 16
+const TILE_SIZE = 8
+const COL_SIZE = 128
 const MAP_SIZE = TILE_SIZE * COL_SIZE
 
 const tileEngine = new TileEngine( MAP_SIZE, TILE_SIZE )
 
-// WORLD
+// PLACEHOLDER
+const placeholder = new THREE.Mesh(
+	new THREE.BoxGeometry( 2, 2, 2 ),
+	new THREE.MeshBasicMaterial( { opacity: 0.5, transparent: true, color: 0x000000 } )
+)
+scene.add( placeholder )
 
-{
-	const geometry = new THREE.PlaneGeometry( TILE_SIZE * COL_SIZE, TILE_SIZE * COL_SIZE ).rotateX( - Math.PI / 2 )
-	const material = new THREE.MeshStandardMaterial( { color: 0xffffff } )
-	const object = new THREE.Mesh( geometry, material )
-	object.receiveShadow = true
-	scene.add( object )
-}
+// GROUND
 
-for ( let x = - ( TILE_SIZE * COL_SIZE ) / 2; x < ( TILE_SIZE * COL_SIZE ) / 2; x += 8 ) {
-
-	for ( let z = - ( TILE_SIZE * COL_SIZE ) / 2; z < ( TILE_SIZE * COL_SIZE ) / 2; z += 8 ) {
-
-		const voxelHeight = MathUtils.randInt( 1, 20 )
-
-		const geometry = new THREE.BoxGeometry( 4, voxelHeight, 4 )
-		const material = new THREE.MeshPhongMaterial( { color: 0xffffff * Math.random() } )
-		const object = new THREE.Mesh( geometry, material )
-		object.position.set( x, voxelHeight / 2, z )
-		object.castShadow = true
-		object.receiveShadow = true
-		scene.add( object )
-	}
-}
+const ground = new THREE.Mesh(
+	new THREE.PlaneGeometry( TILE_SIZE * COL_SIZE, TILE_SIZE * COL_SIZE ).rotateX( - Math.PI / 2 ),
+	new THREE.MeshStandardMaterial( { color: 0x202020 } )
+)
+ground.receiveShadow = true
+scene.add( ground )
 
 // HELPERS
 
-// scene.add( Utils.buildGrid( tileEngine, 0x000000 ) )
+scene.add( Utils.buildGrid( tileEngine, 0x303030 ) )
 scene.add( new THREE.AxesHelper( 512 ) )
+
+//
+
+let mode = "controls"
+
+onModeChange()
+
+const raycaster = new THREE.Raycaster()
+const pointer = new THREE.Vector2()
+
+const objects = [ ground ]
+
+// UI
+
+const modeButtons = document.querySelectorAll( "nav button" )
+
+for ( const button of modeButtons ) {
+
+	button.addEventListener( "click", () => {
+
+		mode = button.dataset.mode
+
+		onModeChange()
+	} )
+}
+
+function onModeChange() {
+
+	if ( mode === "controls" ) {
+
+		controls.enabled = true
+
+		placeholder.visible = false
+	}
+	else {
+
+		controls.enabled = false
+
+		placeholder.visible = true
+	}
+}
+
+canvas.addEventListener( "pointermove", e => {
+
+	if ( mode === "controls" ) {
+
+		return
+	}
+
+	pointer.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 )
+
+	raycaster.setFromCamera( pointer, camera )
+
+	const intersects = raycaster.intersectObjects( objects, false )
+
+	if ( intersects.length > 0 ) {
+
+		const intersect = intersects[ 0 ]
+
+		placeholder.position.copy( intersect.point ).add( intersect.face.normal )
+		placeholder.position.divideScalar( 2 ).floor().multiplyScalar( 2 ).addScalar( 1 )
+	}
+} )
+
+canvas.addEventListener( "pointerdown", e => {
+
+	if ( mode === "controls" ) {
+
+		return
+	}
+
+	pointer.set( ( e.clientX / window.innerWidth ) * 2 - 1, - ( e.clientY / window.innerHeight ) * 2 + 1 )
+
+	raycaster.setFromCamera( pointer, camera )
+
+	const intersects = raycaster.intersectObjects( objects, false )
+
+	if ( intersects.length > 0 ) {
+
+		const intersect = intersects[ 0 ]
+
+		if ( mode === "detach" ) {
+
+			if ( intersect.object !== ground ) {
+
+				scene.remove( intersect.object )
+
+				objects.splice( objects.indexOf( intersect.object ), 1 )
+			}
+		}
+		else if ( mode === "attach" ) {
+
+			const geometry = new THREE.BoxGeometry( 2, 2, 2 )
+			const material = new THREE.MeshPhongMaterial( { transparent: true, flatShading: true, color: 0xffffff * Math.random() } )
+			const object = new THREE.Mesh( geometry, material )
+			object.position.copy( intersect.point ).add( intersect.face.normal )
+			object.position.divideScalar( 2 ).floor().multiplyScalar( 2 ).addScalar( 1 )
+			object.castShadow = true
+			object.receiveShadow = true
+			scene.add( object )
+
+			objects.push( object )
+		}
+	}
+} )
