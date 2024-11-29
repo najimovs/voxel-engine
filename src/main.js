@@ -1,79 +1,20 @@
 import * as THREE from "three"
-import { MapControls } from "three/addons/controls/MapControls"
-import Stats from "three/addons/libs/stats.module.js"
 
 import { TileEngine } from "@lib/core/TileEngine"
+import { setupScene } from "@app/setup-scene"
 import * as Utils from "@app/Utils"
 import * as MathUtils from "@app/MathUtils"
 
 // SETUP
 
-const canvas = document.getElementById( "gl" )
-const scene = new THREE.Scene()
-scene.fog = new THREE.Fog( 0x000000, 1, 512 )
-const camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 1_024 )
-camera.position.set( 8, 16, 8 )
-camera.lookAt( 0, 0, 0 )
-const controls = new MapControls( camera, canvas )
-controls.enableDamping = true
-controls.zoomToCursor = true
-controls.minDistance = 16
-controls.maxDistance = 256
-controls.maxTargetRadius = 256
-controls.maxPolarAngle = Math.PI / 2 - 0.5
-const renderer = new THREE.WebGLRenderer( { canvas } )
-renderer.shadowMap.enabled = true
-renderer.setPixelRatio( window.devicePixelRatio )
-renderer.setSize( window.innerWidth, window.innerHeight )
-
-// LIGHTS
-
-const dirLight = new THREE.DirectionalLight()
-dirLight.position.set( - 128, 128, - 128 );
-dirLight.castShadow = true
-dirLight.shadow.camera.top = 512
-dirLight.shadow.camera.bottom = - 512
-dirLight.shadow.camera.left = - 512
-dirLight.shadow.camera.right = 512
-dirLight.shadow.camera.near = 1
-dirLight.shadow.camera.far = 512
-dirLight.shadow.mapSize.width = 8_192
-dirLight.shadow.mapSize.height = 8_192
-scene.add( dirLight )
-
-// scene.add( new THREE.DirectionalLightHelper( dirLight ) )
-
-const hemiLight = new THREE.HemisphereLight()
-hemiLight.position.set( 0, 512, 0 )
-scene.add( hemiLight )
-
-// ON RESIZE
-
-window.addEventListener( "resize", () => {
-
-	camera.aspect = window.innerWidth / window.innerHeight
-	camera.updateProjectionMatrix()
-	renderer.setSize( window.innerWidth, window.innerHeight )
-} )
-
-// FPS MONITOR
-
-const stats = new Stats()
-document.body.insertBefore( stats.dom, document.body.firstElementChild )
-
-// RENDER
-
-renderer.setAnimationLoop( () => {
-
-	controls.update()
-	renderer.render( scene, camera )
-	stats.update()
+const { canvas, scene, camera, controls, renderer } = setupScene( {
+	canvas: document.getElementById( "gl" ),
 } )
 
 // TILE ENGINE
 
 const VOXEL_SIZE = 4 // min 2
-const VOXEL_RANGE_TILE = 2 // min 2
+const VOXEL_RANGE_TILE = 4 // min 2
 const TILE_SIZE = VOXEL_RANGE_TILE * VOXEL_SIZE
 const TILE_RANGE = 2
 const MAP_SIZE = TILE_SIZE * TILE_RANGE
@@ -85,6 +26,7 @@ const placeholder = new THREE.Mesh(
 	new THREE.BoxGeometry( VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE ),
 	new THREE.MeshBasicMaterial( { opacity: 0.5, transparent: true, color: 0x000000 } )
 )
+placeholder.visible = false
 scene.add( placeholder )
 
 // GROUND
@@ -104,8 +46,6 @@ scene.add( new THREE.AxesHelper( 512 ) )
 //
 
 let mode = "controls"
-
-onModeChange()
 
 const raycaster = new THREE.Raycaster()
 const pointer = new THREE.Vector2()
