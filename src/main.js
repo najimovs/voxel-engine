@@ -56,6 +56,36 @@ const objects = [ ground ]
 
 await loadInitialTiles()
 
+// WEBSOCKET
+
+const ws = new WebSocket( "ws://localhost:8080" )
+
+// When the connection to the server is open
+ws.onopen = () => {
+
+	console.log( "Connected to the server" )
+
+	ws.send( "Hello, server!" )
+}
+
+// When a message is received from the server
+ws.onmessage = event => {
+
+	console.log( `Message from server: ${ event.data }` )
+}
+
+// When the connection to the server is closed
+ws.onclose = () => {
+
+	console.log( "Disconnected from the server" )
+}
+
+// When an error occurs
+ws.onerror = error => {
+
+	console.error( "Error occurred:", error )
+}
+
 // HELPERS
 
 scene.add( Utils.buildGrid( tileEngine, grid, 0x303030 ) )
