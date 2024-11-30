@@ -63,27 +63,68 @@ const ws = new WebSocket( "ws://localhost:8080" )
 // When the connection to the server is open
 ws.onopen = () => {
 
-	console.log( "Connected to the server" )
-
-	ws.send( "Hello, server!" )
+	// console.log( "Connected to the server" )
 }
 
 // When a message is received from the server
 ws.onmessage = event => {
 
-	console.log( `Message from server: ${ event.data }` )
+	const { type, data } = JSON.parse( event.data )
+
+	if ( type === "ATTACH" ) {
+
+		const { voxel } = data
+
+		const [ x, , z ] = voxel.position
+
+		const tile = tileEngine.pointToTile( x, z )
+
+		const tileKey = tileEngine.tileToKey( ...tile )
+
+		const positionKey = Utils.voxelPositionToKey( voxel.position )
+
+		const tileStore = gridStore.get( tileKey )
+
+		tileStore.set( positionKey, voxel )
+
+		attachVoxel( voxel )
+	}
+	else if ( type === "DETACH" ) {
+
+		const { tileKey, positionKey } = data
+
+		const tileStore = gridStore.get( tileKey )
+
+		if ( !tileStore.has( positionKey ) ) {
+
+			return
+		}
+
+		tileStore.delete( positionKey )
+
+		for ( const object of objects ) {
+
+			if ( object.userData.positionKey === positionKey ) {
+
+				scene.remove( object )
+				objects.splice( objects.indexOf( object ), 1 )
+
+				break
+			}
+		}
+	}
 }
 
 // When the connection to the server is closed
 ws.onclose = () => {
 
-	console.log( "Disconnected from the server" )
+	// console.log( "Disconnected from the server" )
 }
 
 // When an error occurs
 ws.onerror = error => {
 
-	console.error( "Error occurred:", error )
+	// console.error( "Error occurred:", error )
 }
 
 // HELPERS
@@ -203,14 +244,25 @@ canvas.addEventListener( "pointerdown", e => {
 
 				const serialized = Utils.serializeTileStore( tileStore, false )
 
-				console.clear()
-				console.log( tileKey )
-				console.log( serialized )
+				// console.clear()
+				// console.log( tileKey )
+				// console.log( serialized )
 
 				//
 
 				scene.remove( intersect.object )
 				objects.splice( objects.indexOf( intersect.object ), 1 )
+
+				// Notify
+
+				ws.send( JSON.stringify( {
+					type: "DETACH",
+					data: {
+						tileKey,
+						position: [ ...position ],
+						positionKey,
+					},
+				} ) )
 			}
 		}
 		else if ( mode === "attach" ) {
@@ -245,13 +297,22 @@ canvas.addEventListener( "pointerdown", e => {
 
 			const serialized = Utils.serializeTileStore( tileStore, false )
 
-			console.clear()
-			console.log( tileKey )
-			console.log( serialized )
+			// console.clear()
+			// console.log( tileKey )
+			// console.log( serialized )
 
 			//
 
 			attachVoxel( voxel )
+
+			// Notify
+
+			ws.send( JSON.stringify( {
+				type: "ATTACH",
+				data: {
+					voxel,
+				},
+			} ) )
 		}
 	}
 } )
@@ -264,6 +325,7 @@ function attachVoxel( voxel ) {
 	object.position.copy( new THREE.Vector3( ...voxel.position ) )
 	object.castShadow = true
 	object.receiveShadow = true
+	object.userData.positionKey = Utils.voxelPositionToKey( [ ...voxel.position ] )
 	scene.add( object )
 
 	objects.push( object )
