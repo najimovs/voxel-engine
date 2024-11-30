@@ -7,7 +7,7 @@ export function setupScene( { canvas } ) {
 	const scene = new THREE.Scene()
 	scene.fog = new THREE.Fog( 0x000000, 1, 1_024 )
 	const camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 1_024 )
-	camera.position.set( 0, 32, 0 )
+	camera.position.set( 0, 24, 24 )
 	camera.lookAt( 0, 0, 0 )
 	const controls = new MapControls( camera, canvas )
 	controls.enableDamping = true

@@ -64,6 +64,7 @@ scene.add( new THREE.AxesHelper( 512 ) )
 //
 
 let mode = "controls"
+let color = "16777215"
 
 const raycaster = new THREE.Raycaster()
 const pointer = new THREE.Vector2()
@@ -96,6 +97,18 @@ function onModeChange() {
 
 		placeholder.visible = true
 	}
+}
+
+// COLORS
+
+const colorButtons = document.querySelectorAll( "#colors button" )
+
+for ( const button of colorButtons ) {
+
+	button.addEventListener( "click", () => {
+
+		color = button.dataset.color - 0
+	} )
 }
 
 canvas.addEventListener( "pointermove", e => {
@@ -195,7 +208,7 @@ canvas.addEventListener( "pointerdown", e => {
 
 			const voxel = {
 				position: [ ...position ],
-				color: Math.floor( 0xffffff * Math.random() ),
+				color: color,
 			}
 
 			tileStore.set( positionKey, voxel )

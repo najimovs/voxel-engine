@@ -41,6 +41,28 @@
 				padding: 0.5rem 1rem;
 				cursor: pointer;
 			}
+			#colors {
+				list-style-type: none;
+				position: absolute;
+				z-index: 999;
+				right: 0;
+				bottom: 0;
+				display: flex;
+				gap: 1rem;
+				padding: 1rem;
+			}
+			#colors button {
+				font-size: 2.5rem;
+				display: flex;
+				padding: 0;
+				border: none;
+				background: transparent;
+				cursor: pointer;
+				opacity: 0.5;
+			}
+			#colors button:hover {
+				opacity: 1;
+			}
 		</style>
 	</head>
 	<body>
@@ -58,6 +80,32 @@
 				</li>
 			</ul>
 		</nav>
+		<ul id="colors">
+			<li>
+				<button data-color="16711680" title="0xFF0000 (Red)">🔴</button>
+			</li>
+			<li>
+				<button data-color="65280" title="0x00FF00 (Green)">🟢</button>
+			</li>
+			<li>
+				<button data-color="16753920" title="0xFFA500 (Orange)">🟠</button>
+			</li>
+			<li>
+				<button data-color="8388736" title="0x800080 (Purple)">🟣</button>
+			</li>
+			<li>
+				<button data-color="255" title="0x0000FF(Blue)">🔵</button>
+			</li>
+			<li>
+				<button data-color="16776960" title="0xFFFF00 (Yellow)">🟡</button>
+			</li>
+			<li>
+				<button data-color="16777215" title="0xFFFFFF (White)">⚪</button>
+			</li>
+			<li>
+				<button data-color="0" title="0x000000 (Black)">⚫</button>
+			</li>
+		</ul>
 		<script type="module" src="/src/main.js"></script>
 	</body>
 </html>
