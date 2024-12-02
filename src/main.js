@@ -58,7 +58,7 @@ await loadInitialTiles()
 
 // WEBSOCKET
 
-const ws = new WebSocket( "ws://localhost:8080" )
+const ws = new WebSocket( "wss://fresh-emu-85.deno.dev" )
 
 // When the connection to the server is open
 ws.onopen = () => {
